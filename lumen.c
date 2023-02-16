@@ -1,9 +1,12 @@
 #include "lumen.h"
 #include "asciiEsc.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
+#include <time.h>
+#include <unistd.h>
 
 void lumen_renderer_init(lumen_renderer* renderer, uint32_t w, uint32_t h){
 	renderer->pixels = calloc(w*h,sizeof(uint32_t));
@@ -59,6 +62,9 @@ char* get_ascii_esc_from_color(uint32_t color){
 	uint8_t red = (color >> 24) & 0xff;
 	uint8_t green = (color >> 16) & 0xff;
 	uint8_t blue = (color >> 8) & 0xff;
+	if (red+green+blue == 0){
+		return "30";
+	}
 	if (red > green && red > blue){
 		return "31";
 	}
@@ -86,6 +92,7 @@ char* lumen_ascii_convert(uint32_t pixel){
 }
 
 void lumen_render_set_pixel(lumen_renderer* renderer, uint32_t x, uint32_t y, uint32_t pixel){
+	if (x > renderer->w || y > renderer->h) return;
 	uint32_t background = renderer->pixels[(y*renderer->w)+x];
 	uint8_t bgr = ((background >> 24) & 0xff);
 	uint8_t bgg = (background >> 16) & 0xff;
@@ -321,4 +328,49 @@ void lumen_render_draw_texture(lumen_renderer* renderer, lumen_texture texture, 
 			lumen_render_set_pixel(renderer, xx, yy, texture.pixels[((yy-y)*texture.w)+(xx-x)]);
 		}
 	}
+}
+
+void lumen_input_init(lumen_input* input){
+	input->term_saved = 0;
+	memset(input->key_pressed, 0, KEY_READ_COUNT);
+}
+
+int32_t tty_raw(lumen_input* input, int32_t fd){
+	struct termios buf;
+	if (tcgetattr(fd, &input->save_termios) < 0) return -1;
+	buf = input->save_termios;
+	buf.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);	
+	buf.c_iflag &= ~(BRKINT | ICRNL | ISTRIP | IXON);
+	buf.c_cflag &= ~(CSIZE | PARENB);
+	buf.c_cflag |= CS8;
+	buf.c_oflag &= ~(OPOST);
+	buf.c_cc[VMIN] = 0;
+	buf.c_cc[VTIME] = 0;
+	if (tcsetattr(fd, TCSAFLUSH, &buf) < 0) return -1;
+	input->term_saved = 1;
+	return 0;
+}
+
+int32_t tty_reset(lumen_input* input, int32_t fd){
+	if (input->term_saved){
+		if (tcsetattr(fd, TCSAFLUSH, &input->save_termios) < 0){
+			return -1;
+		}
+	}
+	return 0;
+}
+
+void lumen_input_new_frame(lumen_input* input){
+	memset(input->key_pressed, 0, KEY_READ_COUNT);
+}
+
+void lumen_input_poll(lumen_input* input){
+	lumen_input_new_frame(input);
+	if (tty_raw(input, 0) == -1) fprintf(stderr, "\033[1mLumen\033[0m could not set terminal to raw mode\n");
+	uint8_t ch;
+	while (read(0, &ch, 1) > 0){
+		printf("[%c]\n", ch);
+		input->key_pressed[ch] = 1;
+	}
+	if (tty_reset(input, 0) == -1) fprintf(stderr, "\033[1mLumen\033[0m could not reset terminal from raw mode\n");
 }

@@ -3,8 +3,10 @@
 
 #include <inttypes.h>
 #include <stddef.h>
+#include <termios.h>
 
 #define READ_BUFFER_SIZE 16
+#define KEY_READ_COUNT 256
 
 typedef enum LUMEN_BLENDMODE{
 	LUMEN_BLENDMODE_NONE,
@@ -32,6 +34,12 @@ typedef struct lumen_texture{
 	uint32_t w;
 	uint32_t h;
 }lumen_texture;
+
+typedef struct lumen_input{
+	struct termios save_termios;
+	uint8_t term_saved;
+	uint8_t key_pressed[KEY_READ_COUNT];
+}lumen_input;
 
 typedef struct v2{
 	float x;
@@ -72,5 +80,12 @@ void lumen_render_put(lumen_renderer* renderer);
 
 char* get_ascii_esc_from_color(uint32_t color);
 char* lumen_ascii_convert(uint32_t pixel);
+
+void lumen_input_init(lumen_input* input);
+void lumen_input_poll(lumen_input* input);
+void lumen_input_new_frame(lumen_input* input);
+
+int32_t tty_raw(lumen_input* input, int32_t fd);
+int32_t tty_reset(lumen_input* input, int32_t fd);
 
 #endif
