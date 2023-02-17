@@ -82,6 +82,7 @@ char* get_ascii_esc_from_color(uint32_t color);
 char* lumen_ascii_convert(uint32_t pixel);
 
 void lumen_input_init(lumen_input* input);
+void lumen_input_close(lumen_input* input);
 void lumen_input_poll(lumen_input* input);
 void lumen_input_new_frame(lumen_input* input);
 

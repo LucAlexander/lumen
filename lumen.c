@@ -21,7 +21,7 @@ void lumen_renderer_free(lumen_renderer* renderer){
 }
 
 void lumen_render_reset(lumen_renderer* renderer){
-	memset(renderer->pixels, 0, renderer->w*renderer->h);
+	memset(renderer->pixels, 0, renderer->w*renderer->h*sizeof(uint32_t));
 }
 
 void lumen_render_put(lumen_renderer* renderer){
@@ -333,6 +333,11 @@ void lumen_render_draw_texture(lumen_renderer* renderer, lumen_texture texture, 
 void lumen_input_init(lumen_input* input){
 	input->term_saved = 0;
 	memset(input->key_pressed, 0, KEY_READ_COUNT);
+	if (tty_raw(input, 0) == -1) fprintf(stderr, "\033[1mLumen\033[0m could not set terminal to raw mode\n");
+}
+
+void lumen_input_close(lumen_input* input){
+	if (tty_reset(input, 0) == -1) fprintf(stderr, "\033[1mLumen\033[0m could not reset terminal from raw mode\n");
 }
 
 int32_t tty_raw(lumen_input* input, int32_t fd){
@@ -366,11 +371,10 @@ void lumen_input_new_frame(lumen_input* input){
 
 void lumen_input_poll(lumen_input* input){
 	lumen_input_new_frame(input);
-	if (tty_raw(input, 0) == -1) fprintf(stderr, "\033[1mLumen\033[0m could not set terminal to raw mode\n");
 	uint8_t ch;
 	while (read(0, &ch, 1) > 0){
-		printf("[%c]\n", ch);
+		printf("[%c]", ch);
+		fflush(stdout);
 		input->key_pressed[ch] = 1;
 	}
-	if (tty_reset(input, 0) == -1) fprintf(stderr, "\033[1mLumen\033[0m could not reset terminal from raw mode\n");
 }
