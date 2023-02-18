@@ -392,3 +392,36 @@ void lumen_input_poll(lumen_input* input){
 		input->key_pressed[ch] = 1;
 	}
 }
+
+void lumen_render_draw_triangle_wireframe(lumen_renderer* renderer, v2 a, v2 b, v2 c){
+	lumen_render_draw_line_v2(renderer, a, b);
+	lumen_render_draw_line_v2(renderer, b, c);
+	lumen_render_draw_line_v2(renderer, c, a);
+}
+
+void lumen_render_draw_triangle(lumen_renderer* renderer, v2 p1, v2 p2, v2 p3){
+	float y1 = p1.y;
+	float y2 = p2.y;
+	float y3 = p3.y;
+	float x1 = p1.x;
+	float x2 = p2.x;
+	float x3 = p3.x;
+	int32_t minx = (int32_t)fmin(fmin(x1, x2), x3);
+	int32_t maxx = (int32_t)fmax(fmax(x1, x2), x3);
+	int32_t miny = (int32_t)fmin(fmin(y1, y2), y3);
+	int32_t maxy = (int32_t)fmax(fmax(y1, y2), y3);
+	int32_t x, y;
+	for (y = miny;y<maxy;++y){
+		for (x = minx;x<maxx;++x){
+			if (
+				(x1-x2) * (y-y1) - (y1-y2) * (x-x1) > 0 &&
+				(x2-x3) * (y-y2) - (y2-y3) * (x-x2) > 0 && 
+				(x3-x1) * (y-y3) - (y3-y1) * (x-x3) > 0
+			){
+				lumen_render_set_pixel(renderer, x, y, renderer->render_color);
+			}
+		}
+	}
+}
+
+

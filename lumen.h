@@ -76,6 +76,8 @@ void lumen_render_draw_circle(lumen_renderer* renderer, int32_t x, int32_t y, in
 void lumen_render_draw_ellipse(lumen_renderer* renderer, int32_t x1, int32_t y1, int32_t x2, int32_t y2);
 void lumen_render_draw_rect(lumen_renderer* renderer, uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2);
 void lumen_render_draw_texture(lumen_renderer* renderer, lumen_texture texture, int32_t x, int32_t y);
+void lumen_render_draw_triangle_wireframe(lumen_renderer* renderer, v2 a, v2 b, v2 c);
+void lumen_render_draw_triangle(lumen_renderer* renderer, v2 a, v2 b, v2 c);
 
 uint8_t check_image_file_header(char* bytes, uint8_t* header, size_t len);
 lumen_texture lumen_texture_load(const char* src);
