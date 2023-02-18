@@ -243,6 +243,9 @@ lumen_texture lumen_texture_load(const char* src){
 	texture.pixels = NULL;
 	texture.w = 0;
 	texture.h = 0;
+	texture.origin_x = 0;
+	texture.origin_y = 0;
+	texture.angle = 0;
 	FILE* file = fopen(src, "r");
 	if (file == NULL){
 		fprintf(stderr, "\033[1mLumen\033[0m tried to open file %s, but encountered an error", src);
@@ -295,6 +298,8 @@ lumen_texture lumen_texture_load(const char* src){
 			texture.pixels = malloc(sizeof(uint32_t)*n);
 			texture.w = w;
 			texture.h = h;
+			texture.origin_x = w/2;
+			texture.origin_y = h/2;
 			for (ptr = maxval;*ptr != '\0';ptr++){}
 			for (i = 0;i<n;++i){
 				uint32_t pixel = 0;
@@ -319,20 +324,28 @@ void lumen_texture_free(lumen_texture* texture){
 	texture->pixels = NULL;
 }
 
-void lumen_render_draw_texture(lumen_renderer* renderer, lumen_texture texture, uint32_t x, uint32_t y){
-	uint32_t xx, yy;
+void lumen_render_draw_texture(lumen_renderer* renderer, lumen_texture texture, int32_t x, int32_t y){
+	int32_t xx, yy;
+	int32_t xc = x+texture.origin_x;
+	int32_t yc = y+texture.origin_y;
 	size_t m = y+texture.h;
 	size_t n = x+texture.w;
 	for (yy=y;yy<m;++yy){
 		for (xx=x;xx<n;++xx){
-			lumen_render_set_pixel(renderer, xx, yy, texture.pixels[((yy-y)*texture.w)+(xx-x)]);
+			int32_t x0 = xx-xc;
+			int32_t y0 = yy-yc;
+			int32_t xa = (x0*cos(texture.angle)) - (y0*sin(texture.angle));
+			int32_t ya = (y0*cos(texture.angle)) + (x0*sin(texture.angle));
+			lumen_render_set_pixel(renderer, xc+xa, yc+ya, texture.pixels[((yy-y)*texture.w)+(xx-x)]);
 		}
 	}
 }
 
-void lumen_input_init(lumen_input* input){
+void lumen_input_init(lumen_input* input, uint32_t pers){
 	input->term_saved = 0;
 	memset(input->key_pressed, 0, KEY_READ_COUNT);
+	input->persistence = pers;
+	input->persistence_count = 0;
 	if (tty_raw(input, 0) == -1) fprintf(stderr, "\033[1mLumen\033[0m could not set terminal to raw mode\n");
 }
 
@@ -366,15 +379,16 @@ int32_t tty_reset(lumen_input* input, int32_t fd){
 }
 
 void lumen_input_new_frame(lumen_input* input){
-	memset(input->key_pressed, 0, KEY_READ_COUNT);
+	if (input->persistence_count++ == input->persistence){
+		input->persistence_count = 0;
+		memset(input->key_pressed, 0, KEY_READ_COUNT);
+	}
 }
 
 void lumen_input_poll(lumen_input* input){
 	lumen_input_new_frame(input);
 	uint8_t ch;
 	while (read(0, &ch, 1) > 0){
-		printf("[%c]", ch);
-		fflush(stdout);
 		input->key_pressed[ch] = 1;
 	}
 }

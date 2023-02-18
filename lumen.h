@@ -33,12 +33,17 @@ typedef struct lumen_texture{
 	uint32_t* pixels;
 	uint32_t w;
 	uint32_t h;
+	int32_t origin_x;
+	int32_t origin_y;
+	float angle;
 }lumen_texture;
 
 typedef struct lumen_input{
 	struct termios save_termios;
 	uint8_t term_saved;
 	uint8_t key_pressed[KEY_READ_COUNT];
+	uint32_t persistence;
+	uint32_t persistence_count;
 }lumen_input;
 
 typedef struct v2{
@@ -70,7 +75,7 @@ void lumen_render_draw_line_v2(lumen_renderer* renderer, v2 a, v2 b);
 void lumen_render_draw_circle(lumen_renderer* renderer, int32_t x, int32_t y, int32_t r);
 void lumen_render_draw_ellipse(lumen_renderer* renderer, int32_t x1, int32_t y1, int32_t x2, int32_t y2);
 void lumen_render_draw_rect(lumen_renderer* renderer, uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2);
-void lumen_render_draw_texture(lumen_renderer* renderer, lumen_texture texture, uint32_t x, uint32_t y);
+void lumen_render_draw_texture(lumen_renderer* renderer, lumen_texture texture, int32_t x, int32_t y);
 
 uint8_t check_image_file_header(char* bytes, uint8_t* header, size_t len);
 lumen_texture lumen_texture_load(const char* src);
@@ -81,7 +86,7 @@ void lumen_render_put(lumen_renderer* renderer);
 char* get_ascii_esc_from_color(uint32_t color);
 char* lumen_ascii_convert(uint32_t pixel);
 
-void lumen_input_init(lumen_input* input);
+void lumen_input_init(lumen_input* input, uint32_t pers);
 void lumen_input_close(lumen_input* input);
 void lumen_input_poll(lumen_input* input);
 void lumen_input_new_frame(lumen_input* input);
