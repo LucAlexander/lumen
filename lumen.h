@@ -51,6 +51,12 @@ typedef struct v2{
 	float y;
 }v2;
 
+typedef struct v3{
+	float x;
+	float y;
+	float z;
+}v3;
+
 typedef struct v4{
 	float x1;
 	float y1;
@@ -59,6 +65,7 @@ typedef struct v4{
 }v4;
 
 v4 v4_v2(v2 a, v2 b);
+void rotate_v2(v2 origin, v2* point, float angle);
 
 void lumen_renderer_init(lumen_renderer* renderer, uint32_t w, uint32_t h);
 void lumen_renderer_free(lumen_renderer* renderer);

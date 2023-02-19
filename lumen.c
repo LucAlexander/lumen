@@ -28,7 +28,7 @@ void lumen_render_put(lumen_renderer* renderer){
 	char* reset_prompt = A_CURSOR_HOME;
 	printf(reset_prompt);
 	uint32_t x, y;
-	char* endline = "|\n\r";
+	char* endline = "\n\r";
 	char* clear = "\033[0m";
 	size_t cap = renderer->w*renderer->h;
 	size_t len = 0;
@@ -424,4 +424,11 @@ void lumen_render_draw_triangle(lumen_renderer* renderer, v2 p1, v2 p2, v2 p3){
 	}
 }
 
-
+void rotate_v2(v2 origin, v2* point, float angle){
+	float x0 = point->x - origin.x;
+	float y0 = point->y - origin.y;
+	float xa = (x0*cos(angle)) - (y0*sin(angle));
+	float ya = (y0*cos(angle)) + (x0*sin(angle));
+	point->x = origin.x + xa;
+	point->y = origin.y + ya;
+}
