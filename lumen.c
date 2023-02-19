@@ -7,6 +7,7 @@
 #include <math.h>
 #include <time.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 void lumen_renderer_init(lumen_renderer* renderer, uint32_t w, uint32_t h){
 	renderer->pixels = calloc(w*h,sizeof(uint32_t));
@@ -342,54 +343,44 @@ void lumen_render_draw_texture(lumen_renderer* renderer, lumen_texture texture, 
 }
 
 void lumen_input_init(lumen_input* input, uint32_t pers){
-	input->term_saved = 0;
-	memset(input->key_pressed, 0, KEY_READ_COUNT);
-	input->persistence = pers;
-	input->persistence_count = 0;
-	if (tty_raw(input, 0) == -1) fprintf(stderr, "\033[1mLumen\033[0m could not set terminal to raw mode\n");
-}
-
-void lumen_input_close(lumen_input* input){
-	if (tty_reset(input, 0) == -1) fprintf(stderr, "\033[1mLumen\033[0m could not reset terminal from raw mode\n");
-}
-
-int32_t tty_raw(lumen_input* input, int32_t fd){
-	struct termios buf;
-	if (tcgetattr(fd, &input->save_termios) < 0) return -1;
-	buf = input->save_termios;
-	buf.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);	
-	buf.c_iflag &= ~(BRKINT | ICRNL | ISTRIP | IXON);
-	buf.c_cflag &= ~(CSIZE | PARENB);
-	buf.c_cflag |= CS8;
-	buf.c_oflag &= ~(OPOST);
-	buf.c_cc[VMIN] = 0;
-	buf.c_cc[VTIME] = 0;
-	if (tcsetattr(fd, TCSAFLUSH, &buf) < 0) return -1;
-	input->term_saved = 1;
-	return 0;
-}
-
-int32_t tty_reset(lumen_input* input, int32_t fd){
-	if (input->term_saved){
-		if (tcsetattr(fd, TCSAFLUSH, &input->save_termios) < 0){
-			return -1;
-		}
+	lumen_input_new_frame(input);
+	if ((input->file_d = open(INPUT_EVENT_FILE, O_RDONLY)) == -1){
+		fprintf(stderr, "\033[1mLumen\033[0m could not open input event file\n");
+		return;
 	}
-	return 0;
 }
 
 void lumen_input_new_frame(lumen_input* input){
-	if (input->persistence_count++ == input->persistence){
-		input->persistence_count = 0;
-		memset(input->key_pressed, 0, KEY_READ_COUNT);
+	memset(input->key_pressed, 0, KEY_READ_COUNT);
+	memset(input->key_released, 0, KEY_READ_COUNT);
+}
+
+void lumen_input_event_parse(lumen_input* input){
+	switch(input->event.value){
+		case LUMEN_INPUT_RELEASED:{
+			input->key_released[input->event.code] = 1;
+			input->key_held[input->event.code] = 0;
+		}break;
+		case LUMEN_INPUT_PRESSED:{
+			input->key_pressed[input->event.code] = 1;
+			input->key_held[input->event.code] = 1;
+		}break;
+		/*
+		case LUMEN_INPUT_HELD:{
+			input->key_held[input->event.code] = 1;
+		}break;
+		*/
 	}
 }
 
 void lumen_input_poll(lumen_input* input){
 	lumen_input_new_frame(input);
-	uint8_t ch;
-	while (read(0, &ch, 1) > 0){
-		input->key_pressed[ch] = 1;
+	ssize_t n;
+	if ((n=read(input->file_d, &input->event, sizeof(input->event))) > 0){
+		if (input->event.type == EV_KEY){
+			lumen_input_event_parse(input);
+			//printf("%d 0x%04x %d\n", input->event.value, (int32_t)input->event.code, (int32_t)input->event.code);
+		}
 	}
 }
 

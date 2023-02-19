@@ -3,10 +3,17 @@
 
 #include <inttypes.h>
 #include <stddef.h>
-#include <termios.h>
+#include <linux/input.h>
 
 #define READ_BUFFER_SIZE 16
 #define KEY_READ_COUNT 256
+#define INPUT_EVENT_FILE "/dev/input/by-path/platform-i8042-serio-0-event-kbd"
+
+typedef enum LUMEN_INPUT_EVENT_VALUE{
+	LUMEN_INPUT_RELEASED = 0,
+	LUMEN_INPUT_PRESSED = 1,
+	LUMEN_INPUT_HELD = 2
+}LUMEN_INPUT_EVENT_VALUE;
 
 typedef enum LUMEN_BLENDMODE{
 	LUMEN_BLENDMODE_NONE,
@@ -39,11 +46,11 @@ typedef struct lumen_texture{
 }lumen_texture;
 
 typedef struct lumen_input{
-	struct termios save_termios;
-	uint8_t term_saved;
 	uint8_t key_pressed[KEY_READ_COUNT];
-	uint32_t persistence;
-	uint32_t persistence_count;
+	uint8_t key_released[KEY_READ_COUNT];
+	uint8_t key_held[KEY_READ_COUNT];
+	struct input_event event;
+	int32_t file_d;
 }lumen_input;
 
 typedef struct v2{
@@ -96,8 +103,8 @@ char* get_ascii_esc_from_color(uint32_t color);
 char* lumen_ascii_convert(uint32_t pixel);
 
 void lumen_input_init(lumen_input* input, uint32_t pers);
-void lumen_input_close(lumen_input* input);
 void lumen_input_poll(lumen_input* input);
+void lumen_input_event_parse(lumen_input* input);
 void lumen_input_new_frame(lumen_input* input);
 
 int32_t tty_raw(lumen_input* input, int32_t fd);
