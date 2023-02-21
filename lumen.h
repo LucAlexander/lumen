@@ -4,9 +4,10 @@
 #include <inttypes.h>
 #include <stddef.h>
 #include <linux/input.h>
+#include <termios.h>
 
 #define READ_BUFFER_SIZE 16
-#define KEY_READ_COUNT 256
+#define KEY_READ_COUNT 128
 #define INPUT_EVENT_FILE "/dev/input/by-path/platform-i8042-serio-0-event-kbd"
 
 typedef enum LUMEN_INPUT_EVENT_VALUE{
@@ -43,13 +44,17 @@ typedef struct lumen_texture{
 	int32_t origin_x;
 	int32_t origin_y;
 	float angle;
+	float scale_x;
+	float scale_y;
 }lumen_texture;
 
 typedef struct lumen_input{
+	uint8_t term_saved;
 	uint8_t key_pressed[KEY_READ_COUNT];
 	uint8_t key_released[KEY_READ_COUNT];
 	uint8_t key_held[KEY_READ_COUNT];
 	struct input_event event;
+	struct termios save_termios;
 	int32_t file_d;
 }lumen_input;
 
@@ -102,12 +107,95 @@ void lumen_render_put(lumen_renderer* renderer);
 char* get_ascii_esc_from_color(uint32_t color);
 char* lumen_ascii_convert(uint32_t pixel);
 
-void lumen_input_init(lumen_input* input, uint32_t pers);
+void lumen_input_init(lumen_input* input);
+void lumen_input_close(lumen_input* input);
 void lumen_input_poll(lumen_input* input);
 void lumen_input_event_parse(lumen_input* input);
 void lumen_input_new_frame(lumen_input* input);
 
 int32_t tty_raw(lumen_input* input, int32_t fd);
 int32_t tty_reset(lumen_input* input, int32_t fd);
+
+typedef enum LUMEN_SCANCODE{
+	LINP_ESCAPE=1,
+	LINP_1=2,
+	LINP_2=3,
+	LINP_3=4,
+	LINP_4=5,
+	LINP_5=6,
+	LINP_6=7,
+	LINP_7=8,
+	LINP_8=9,
+	LINP_9=10,
+	LINP_0=11,
+	LINP_MINUS=12,
+	LINP_EQUAL=13,
+	LINP_BACKSPACE=14,
+	LINP_TAB=15,
+	LINP_Q=16,
+	LINP_W=17,
+	LINP_E=18,
+	LINP_R=19,
+	LINP_T=20,
+	LINP_Y=21,
+	LINP_U=22,
+	LINP_I=23,
+	LINP_O=24,
+	LINP_P=25,
+	LINP_LBRACKET=26,
+	LINP_RBRACKET=27,
+	LINP_ENTER=28,
+	LINP_LCONTROL=29,
+	LINP_A=30,
+	LINP_S=31,
+	LINP_D=32,
+	LINP_F=33,
+	LINP_G=34,
+	LINP_H=35,
+	LINP_J=36,
+	LINP_K=37,
+	LINP_L=38,
+	LINP_SEMICOLON=39,
+	LINP_APOSTROPHE=40,
+	LINP_BACKTICK=41,
+	LINP_LSHIFT=42,
+	LINP_BACKSLASH=43,
+	LINP_Z=4,
+	LINP_X=45,
+	LINP_C=46,
+	LINP_V=47,
+	LINP_B=48,
+	LINP_N=49,
+	LINP_M=50,
+	LINP_COMMA=51,
+	LINP_PERIOD=52,
+	LINP_SLASH=53,
+	LINP_RSHIFT=54,
+	LINP_LALT=56,
+	LINP_CAPSLOCK=58,
+	LINP_F1=59,
+	LINP_F2=60,
+	LINP_F3=61,
+	LINP_F4=62,
+	LINP_F5=63,
+	LINP_F6=64,
+	LINP_F7=65,
+	LINP_F8=66,
+	LINP_F9=67,
+	LINP_F10=68,
+	LINP_F11=87,
+	LINP_F12=88,
+	LINP_RCONTROL=97,
+	LINP_PRINTSCREEN=99,
+	LINP_RALT=100,
+	LINP_UP=103,
+	LINP_LEFT=105,
+	LINP_RIGHT=106,
+	LINP_DOWN=108,
+	LINP_INSERT=110,
+	LINP_DELETE=111,
+	LINP_SUPER=125,
+	LINP_COUNT
+}LUMEN_SCANCODE;
 
 #endif

@@ -246,6 +246,8 @@ lumen_texture lumen_texture_load(const char* src){
 	texture.h = 0;
 	texture.origin_x = 0;
 	texture.origin_y = 0;
+	texture.scale_x = 1;
+	texture.scale_y = 1;
 	texture.angle = 0;
 	FILE* file = fopen(src, "r");
 	if (file == NULL){
@@ -333,21 +335,34 @@ void lumen_render_draw_texture(lumen_renderer* renderer, lumen_texture texture, 
 	size_t n = x+texture.w;
 	for (yy=y;yy<m;++yy){
 		for (xx=x;xx<n;++xx){
-			int32_t x0 = xx-xc;
-			int32_t y0 = yy-yc;
+			int32_t x0 = (xx-xc)*texture.scale_x;
+			int32_t y0 = (yy-yc)*texture.scale_y;
 			int32_t xa = (x0*cos(texture.angle)) - (y0*sin(texture.angle));
 			int32_t ya = (y0*cos(texture.angle)) + (x0*sin(texture.angle));
 			lumen_render_set_pixel(renderer, xc+xa, yc+ya, texture.pixels[((yy-y)*texture.w)+(xx-x)]);
+			int32_t i, k;
+			for (i = 0;i<ceil(texture.scale_x);++i){
+				for (k = 0;k<ceil(texture.scale_y);++k){
+					lumen_render_set_pixel(renderer, xc+xa+i, yc+ya+k, texture.pixels[((yy-y)*texture.w)+(xx-x)]);
+				}
+			}
 		}
 	}
 }
 
-void lumen_input_init(lumen_input* input, uint32_t pers){
+void lumen_input_init(lumen_input* input){
+	input->term_saved = 0;
 	lumen_input_new_frame(input);
+	memset(input->key_held, 0, KEY_READ_COUNT);
 	if ((input->file_d = open(INPUT_EVENT_FILE, O_RDONLY)) == -1){
 		fprintf(stderr, "\033[1mLumen\033[0m could not open input event file\n");
 		return;
 	}
+	if (tty_raw(input, 0) == -1) fprintf(stderr, "\033[1mLumen\033[0m could not set terminal to noncanonical mode\n");
+}
+
+void lumen_input_close(lumen_input* input){
+	if (tty_reset(input, 0) == -1) fprintf(stderr, "\033[1mLumen\033[0m could not reset terminal to canonical mode\n");
 }
 
 void lumen_input_new_frame(lumen_input* input){
@@ -365,23 +380,42 @@ void lumen_input_event_parse(lumen_input* input){
 			input->key_pressed[input->event.code] = 1;
 			input->key_held[input->event.code] = 1;
 		}break;
-		/*
-		case LUMEN_INPUT_HELD:{
-			input->key_held[input->event.code] = 1;
-		}break;
-		*/
+		default:return;
 	}
 }
 
 void lumen_input_poll(lumen_input* input){
 	lumen_input_new_frame(input);
-	ssize_t n;
-	if ((n=read(input->file_d, &input->event, sizeof(input->event))) > 0){
+	if (read(input->file_d, &input->event, sizeof(input->event)) > 0){
 		if (input->event.type == EV_KEY){
 			lumen_input_event_parse(input);
-			//printf("%d 0x%04x %d\n", input->event.value, (int32_t)input->event.code, (int32_t)input->event.code);
 		}
 	}
+}
+
+int32_t tty_raw(lumen_input* input, int32_t fd){
+	struct termios buf;
+	if (tcgetattr(fd, &input->save_termios) < 0) return -1;
+	buf = input->save_termios;
+	buf.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);	
+	buf.c_iflag &= ~(BRKINT | ICRNL | ISTRIP | IXON);
+	buf.c_cflag &= ~(CSIZE | PARENB);
+	buf.c_cflag |= CS8;
+	buf.c_oflag &= ~(OPOST);
+	buf.c_cc[VMIN] = 0;
+	buf.c_cc[VTIME] = 0;
+	if (tcsetattr(fd, TCSAFLUSH, &buf) < 0) return -1;
+	input->term_saved = 1;
+	return 0;
+}
+
+int32_t tty_reset(lumen_input* input, int32_t fd){
+	if (input->term_saved){
+		if (tcsetattr(fd, TCSAFLUSH, &input->save_termios) < 0){
+			return -1;
+		}
+	}
+	return 0;
 }
 
 void lumen_render_draw_triangle_wireframe(lumen_renderer* renderer, v2 a, v2 b, v2 c){
