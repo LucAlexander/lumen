@@ -457,3 +457,19 @@ void rotate_v2(v2 origin, v2* point, float angle){
 	point->x = origin.x + xa;
 	point->y = origin.y + ya;
 }
+
+float* mat_mult(float* a, uint32_t w, uint32_t h, float* b, uint32_t ww, uint32_t hh){
+	// assume matricies are ordered column by column: [c0r0,c0r1,...]
+	uint32_t i, k, n, m;
+	float* c = malloc(sizeof(float)*h*ww);
+	for (i = 0;i<ww;++i){
+		for (k = 0;k<h;++k){
+			float val = 0;
+			for (n = 0;n<hh;++n){
+				val += a[(n*h)+k] * b[(i*hh)+n];
+			}
+			c[(k*hh)+i] = val;
+		}
+	}
+	return 0;
+}

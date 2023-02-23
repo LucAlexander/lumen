@@ -116,6 +116,8 @@ void lumen_input_new_frame(lumen_input* input);
 int32_t tty_raw(lumen_input* input, int32_t fd);
 int32_t tty_reset(lumen_input* input, int32_t fd);
 
+float* mat_mult(float* a, uint32_t w, uint32_t h, float* b, uint32_t ww, uint32_t hh);
+
 typedef enum LUMEN_SCANCODE{
 	LINP_ESCAPE=1,
 	LINP_1=2,
